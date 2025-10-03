@@ -1,0 +1,19 @@
+{
+  "name": "worlddriven-documentation",
+  "version": "1.0.0",
+  "description": "Vision, philosophy, and organization management for worlddriven",
+  "type": "module",
+  "scripts": {
+    "parse": "node scripts/parse-repositories.js",
+    "fetch-github": "node scripts/fetch-github-state.js",
+    "detect-drift": "node scripts/detect-drift.js"
+  },
+  "keywords": [
+    "worlddriven",
+    "documentation",
+    "organization-management",
+    "governance"
+  ],
+  "author": "worlddriven",
+  "license": "AGPL-3.0"
+}
