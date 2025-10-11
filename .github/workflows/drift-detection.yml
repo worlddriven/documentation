@@ -38,12 +38,25 @@ jobs:
           set -e
         continue-on-error: true
 
-      - name: Comment PR with drift report
+      - name: Preview sync actions (dry-run)
+        id: sync
+        env:
+          WORLDDRIVEN_GITHUB_TOKEN: ${{ secrets.WORLDDRIVEN_GITHUB_TOKEN }}
+        run: |
+          set +e
+          node scripts/sync-repositories.js > sync-preview.md 2>&1
+          EXIT_CODE=$?
+          echo "exit_code=$EXIT_CODE" >> $GITHUB_OUTPUT
+          set -e
+        continue-on-error: true
+
+      - name: Comment PR with drift report and sync preview
         uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs');
-            const report = fs.readFileSync('drift-report.md', 'utf8');
+            const driftReport = fs.readFileSync('drift-report.md', 'utf8');
+            const syncPreview = fs.readFileSync('sync-preview.md', 'utf8');
 
             // Find existing comment
             const { data: comments } = await github.rest.issues.listComments({
@@ -57,7 +70,7 @@ jobs:
               comment.body.includes('Repository Drift Report')
             );
 
-            const commentBody = `${report}\n\n---\n*🤖 This report is automatically generated on every PR that modifies REPOSITORIES.md*`;
+            const commentBody = `${driftReport}\n\n---\n\n${syncPreview}\n\n---\n*🤖 This report is automatically generated on every PR that modifies REPOSITORIES.md*\n*The sync preview shows what actions will be applied when this PR is merged to main.*`;
 
             if (botComment) {
               // Update existing comment
