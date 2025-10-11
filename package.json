@@ -6,7 +6,9 @@
   "scripts": {
     "parse": "node scripts/parse-repositories.js",
     "fetch-github": "node scripts/fetch-github-state.js",
-    "detect-drift": "node scripts/detect-drift.js"
+    "detect-drift": "node scripts/detect-drift.js",
+    "sync": "node scripts/sync-repositories.js",
+    "sync-apply": "node scripts/sync-repositories.js --apply"
   },
   "keywords": [
     "worlddriven",
