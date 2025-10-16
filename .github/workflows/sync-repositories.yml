@@ -1,0 +1,86 @@
+name: Sync Repositories
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Make scripts executable
+        run: chmod +x scripts/*.js
+
+      - name: Sync repositories to GitHub
+        id: sync
+        env:
+          WORLDDRIVEN_GITHUB_TOKEN: ${{ secrets.WORLDDRIVEN_GITHUB_TOKEN }}
+        run: |
+          set +e
+          node scripts/sync-repositories.js --apply > sync-report.md 2>&1
+          EXIT_CODE=$?
+          echo "exit_code=$EXIT_CODE" >> $GITHUB_OUTPUT
+          set -e
+        continue-on-error: true
+
+      - name: Comment on commit with results
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('sync-report.md', 'utf8');
+
+            // Create a comment on the commit
+            await github.rest.repos.createCommitComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              commit_sha: context.sha,
+              body: `${report}\n\n---\n*🤖 Automated sync of GitHub organization with REPOSITORIES.md*`,
+            });
+
+      - name: Create issue if failures occurred
+        if: steps.sync.outputs.exit_code != '0'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('sync-report.md', 'utf8');
+
+            const title = '⚠️ Repository sync failed';
+            const body = `Repository synchronization encountered errors on commit ${context.sha.substring(0, 7)}.
+
+            ${report}
+
+            ---
+            **Commit**: ${context.sha}
+            **Triggered by**: @${context.actor}
+            **Action**: ${context.payload.head_commit?.message || 'Push to main'}
+
+            Please review the errors above and take appropriate action.`;
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              body: body,
+              labels: ['automation', 'sync-failure'],
+            });
+
+      - name: Report sync status
+        if: steps.sync.outputs.exit_code == '0'
+        run: |
+          echo "✅ Repository sync completed successfully"
+          echo "All changes have been applied to the GitHub organization"
