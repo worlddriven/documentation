@@ -29,7 +29,7 @@ jobs:
       - name: Run drift detection
         id: drift
         env:
-          WORLDDRIVEN_GITHUB_TOKEN: ${{ secrets.WORLDDRIVEN_GITHUB_TOKEN }}
+          WORLDDRIVEN_GITHUB_TOKEN: ${{ secrets.WORLDDRIVEN_GITHUB_TOKEN || github.token }}
         run: |
           set +e
           node scripts/detect-drift.js > drift-report.md 2>&1
@@ -41,7 +41,7 @@ jobs:
       - name: Preview sync actions (dry-run)
         id: sync
         env:
-          WORLDDRIVEN_GITHUB_TOKEN: ${{ secrets.WORLDDRIVEN_GITHUB_TOKEN }}
+          WORLDDRIVEN_GITHUB_TOKEN: ${{ secrets.WORLDDRIVEN_GITHUB_TOKEN || github.token }}
         run: |
           set +e
           node scripts/sync-repositories.js > sync-preview.md 2>&1
@@ -50,7 +50,20 @@ jobs:
           set -e
         continue-on-error: true
 
+      - name: Add drift report to workflow summary
+        if: always()
+        run: |
+          echo "## Repository Drift Detection Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          cat drift-report.md >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          cat sync-preview.md >> $GITHUB_STEP_SUMMARY
+
       - name: Comment PR with drift report and sync preview
+        # Skip commenting on fork PRs (no write permissions), but drift report is available in workflow summary above
+        if: github.event.pull_request.head.repo.full_name == github.repository
         uses: actions/github-script@v7
         with:
           script: |

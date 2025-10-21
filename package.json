@@ -4,6 +4,7 @@
   "description": "Vision, philosophy, and organization management for worlddriven",
   "type": "module",
   "scripts": {
+    "test": "node --test scripts/*.test.js",
     "parse": "node scripts/parse-repositories.js",
     "fetch-github": "node scripts/fetch-github-state.js",
     "detect-drift": "node scripts/detect-drift.js",

@@ -8,6 +8,8 @@ on:
 jobs:
   sync:
     runs-on: ubuntu-latest
+    # Only run on the main worlddriven organization, not on forks
+    if: github.repository_owner == 'worlddriven'
     permissions:
       contents: write
       issues: write
