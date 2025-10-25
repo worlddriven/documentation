@@ -22,9 +22,21 @@ function parseRepositories(content) {
   const lines = content.split('\n');
 
   let currentRepo = null;
+  let inCodeBlock = false;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
+
+    // Track code block boundaries
+    if (line.startsWith('```')) {
+      inCodeBlock = !inCodeBlock;
+      continue;
+    }
+
+    // Skip lines inside code blocks
+    if (inCodeBlock) {
+      continue;
+    }
 
     // Repository name (## heading)
     if (line.startsWith('## ')) {

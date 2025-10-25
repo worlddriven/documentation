@@ -35,3 +35,11 @@ Each repository is defined using markdown headers and properties:
 ## Current Repositories
 
 <!-- Add repositories below this line -->
+
+## documentation
+- Description: Core documentation repository for worlddriven project
+- Topics: documentation, worlddriven
+
+## webapp
+- Description: Web application interface for worlddriven
+- Topics: webapp, web, frontend, worlddriven
