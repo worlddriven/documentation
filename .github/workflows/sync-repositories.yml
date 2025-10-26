@@ -38,6 +38,13 @@ jobs:
           set -e
         continue-on-error: true
 
+      - name: Add sync report to workflow summary
+        if: always()
+        run: |
+          echo "## Repository Sync Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          cat sync-report.md >> $GITHUB_STEP_SUMMARY
+
       - name: Comment on commit with results
         uses: actions/github-script@v7
         with:

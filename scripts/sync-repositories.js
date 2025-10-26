@@ -100,15 +100,150 @@ async function updateRepositoryTopics(token, repoName, topics) {
 }
 
 /**
+ * Delete a repository from the GitHub organization
+ */
+async function deleteRepository(token, repoName) {
+  const url = `${GITHUB_API_BASE}/repos/${ORG_NAME}/${repoName}`;
+
+  const response = await fetch(url, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Accept': 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`GitHub API error (${response.status}): ${error}`);
+  }
+
+  // DELETE returns 204 No Content on success
+  return { deleted: true };
+}
+
+/**
+ * Check if a repository is empty (has no commits)
+ */
+async function checkIfRepositoryEmpty(token, repoName) {
+  const url = `${GITHUB_API_BASE}/repos/${ORG_NAME}/${repoName}/commits?per_page=1`;
+
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Accept': 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+    },
+  });
+
+  // 409 Conflict is returned for empty repositories
+  // 200 OK is returned if commits exist
+  if (response.status === 409) {
+    return true;
+  }
+
+  if (response.ok) {
+    return false;
+  }
+
+  // For other errors, check the response body
+  const data = await response.json();
+  if (data.message && data.message.toLowerCase().includes('git repository is empty')) {
+    return true;
+  }
+
+  // If we can't determine, assume it's not empty to avoid accidentally initializing
+  return false;
+}
+
+/**
+ * Create an initial commit in a repository
+ */
+async function createInitialCommit(token, repoName, description) {
+  const url = `${GITHUB_API_BASE}/repos/${ORG_NAME}/${repoName}/contents/README.md`;
+
+  const content = `# ${repoName}\n\n${description || 'WorldDriven repository'}\n`;
+  const encodedContent = Buffer.from(content).toString('base64');
+
+  const body = {
+    message: 'Initial commit',
+    content: encodedContent,
+  };
+
+  const response = await fetch(url, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Accept': 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`GitHub API error (${response.status}): ${error}`);
+  }
+
+  return await response.json();
+}
+
+/**
+ * Check existing repositories for emptiness and add initialize actions
+ */
+async function addInitializeActions(token, plan, actualRepos, desiredRepos) {
+  // Create a map of desired repos for quick lookup
+  const desiredMap = new Map(desiredRepos.map(r => [r.name, r]));
+
+  // Check each actual repo that's also in desired state (not being deleted)
+  for (const actualRepo of actualRepos) {
+    const desiredRepo = desiredMap.get(actualRepo.name);
+
+    // Skip if repo is not in desired state (will be deleted)
+    if (!desiredRepo) {
+      continue;
+    }
+
+    // Skip if repo is being created (will be initialized during creation)
+    const isBeingCreated = plan.actions.some(
+      action => action.type === 'create' && action.repo === actualRepo.name
+    );
+    if (isBeingCreated) {
+      continue;
+    }
+
+    // Check if repository is empty
+    const isEmpty = await checkIfRepositoryEmpty(token, actualRepo.name);
+
+    if (isEmpty) {
+      plan.actions.push({
+        type: 'initialize',
+        repo: actualRepo.name,
+        description: desiredRepo.description,
+      });
+      plan.summary.initialize++;
+    }
+  }
+}
+
+/**
  * Generate sync plan from drift
  */
 function generateSyncPlan(drift) {
+  // Protected repositories that should never be deleted
+  const PROTECTED_REPOS = ['documentation', 'core', 'webapp'];
+
   const plan = {
     actions: [],
     summary: {
       create: 0,
       updateDescription: 0,
       updateTopics: 0,
+      initialize: 0,
+      delete: 0,
       skip: 0,
     },
   };
@@ -145,14 +280,23 @@ function generateSyncPlan(drift) {
     plan.summary.updateTopics++;
   }
 
-  // Report extra repos (but don't delete)
+  // Delete extra repos (unless protected)
   for (const repo of drift.extra) {
-    plan.actions.push({
-      type: 'skip',
-      repo: repo.name,
-      reason: 'Extra repository in GitHub - not in REPOSITORIES.md (manual deletion required)',
-    });
-    plan.summary.skip++;
+    if (PROTECTED_REPOS.includes(repo.name)) {
+      plan.actions.push({
+        type: 'skip',
+        repo: repo.name,
+        reason: 'Protected repository - excluded from automatic deletion',
+      });
+      plan.summary.skip++;
+    } else {
+      plan.actions.push({
+        type: 'delete',
+        repo: repo.name,
+        data: repo,
+      });
+      plan.summary.delete++;
+    }
   }
 
   return plan;
@@ -191,10 +335,16 @@ async function executeSyncPlan(token, plan, dryRun) {
       switch (action.type) {
         case 'create':
           result = await createRepository(token, action.data);
+          // Create initial commit so repository can be forked
+          await createInitialCommit(token, action.data.name, action.data.description);
           // After creating, set topics if they exist
           if (action.data.topics && action.data.topics.length > 0) {
             await updateRepositoryTopics(token, action.data.name, action.data.topics);
           }
+          break;
+
+        case 'initialize':
+          result = await createInitialCommit(token, action.repo, action.description);
           break;
 
         case 'update-description':
@@ -203,6 +353,10 @@ async function executeSyncPlan(token, plan, dryRun) {
 
         case 'update-topics':
           result = await updateRepositoryTopics(token, action.repo, action.to);
+          break;
+
+        case 'delete':
+          result = await deleteRepository(token, action.repo);
           break;
 
         default:
@@ -244,7 +398,9 @@ function formatSyncReport(plan, results, dryRun) {
   lines.push(`- Create: ${plan.summary.create}`);
   lines.push(`- Update descriptions: ${plan.summary.updateDescription}`);
   lines.push(`- Update topics: ${plan.summary.updateTopics}`);
-  lines.push(`- Skip (manual action needed): ${plan.summary.skip}`);
+  lines.push(`- Initialize (add first commit): ${plan.summary.initialize}`);
+  lines.push(`- Delete: ${plan.summary.delete}`);
+  lines.push(`- Skip (protected): ${plan.summary.skip}`);
   lines.push('');
 
   // Success
@@ -273,6 +429,18 @@ function formatSyncReport(plan, results, dryRun) {
           lines.push(`- **Update topics** for \`${action.repo}\``);
           lines.push(`  - From: ${action.from.join(', ') || '(none)'}`);
           lines.push(`  - To: ${action.to.join(', ') || '(none)'}`);
+          break;
+
+        case 'initialize':
+          lines.push(`- **Initialize** \`${action.repo}\` (create first commit)`);
+          lines.push(`  - Description: ${action.description}`);
+          break;
+
+        case 'delete':
+          lines.push(`- **Delete** \`${action.repo}\``);
+          if (action.data.description) {
+            lines.push(`  - Description: ${action.data.description}`);
+          }
           break;
       }
       lines.push('');
@@ -342,6 +510,10 @@ async function main() {
     // Generate sync plan
     console.error('📋 Generating sync plan...');
     const plan = generateSyncPlan(drift);
+
+    // Check for empty repositories and add initialize actions
+    console.error('🔍 Checking for empty repositories...');
+    await addInitializeActions(token, plan, actualRepos, desiredRepos);
 
     // Execute plan
     console.error(`${dryRun ? '🔍' : '⚡'} ${dryRun ? 'Simulating' : 'Executing'} sync plan...`);
