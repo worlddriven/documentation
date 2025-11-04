@@ -16,6 +16,51 @@ const GITHUB_API_BASE = 'https://api.github.com';
 const ORG_NAME = 'worlddriven';
 
 /**
+ * Standard repository settings applied to all worlddriven repositories
+ * Enforces: squash-only merges, branch cleanup, democratic workflow
+ */
+const STANDARD_REPO_SETTINGS = {
+  allow_squash_merge: true,
+  allow_merge_commit: false,
+  allow_rebase_merge: false,
+  allow_auto_merge: false,
+  delete_branch_on_merge: true,
+  allow_update_branch: false,
+};
+
+/**
+ * Standard branch protection ruleset applied to default branch
+ * Enforces: PR requirement, no force push, no deletion
+ */
+const STANDARD_BRANCH_RULESET = {
+  name: 'Worlddriven Democratic Governance',
+  target: 'branch',
+  enforcement: 'active',
+  conditions: {
+    ref_name: {
+      include: ['~DEFAULT_BRANCH'],
+      exclude: [],
+    },
+  },
+  rules: [
+    { type: 'deletion' },
+    { type: 'non_fast_forward' },
+    {
+      type: 'pull_request',
+      parameters: {
+        required_approving_review_count: 0,
+        dismiss_stale_reviews_on_push: false,
+        require_code_owner_review: false,
+        require_last_push_approval: false,
+        required_review_thread_resolution: false,
+        allowed_merge_methods: ['squash'],
+      },
+    },
+  ],
+  bypass_actors: [],
+};
+
+/**
  * Create a repository in the GitHub organization
  */
 async function createRepository(token, repoData) {
@@ -25,9 +70,12 @@ async function createRepository(token, repoData) {
     name: repoData.name,
     description: repoData.description,
     private: false,
+    auto_init: true, // Creates initial README and main branch
     has_issues: true,
     has_projects: true,
     has_wiki: true,
+    // Apply standard settings at creation
+    ...STANDARD_REPO_SETTINGS,
   };
 
   const response = await fetch(url, {
@@ -47,6 +95,90 @@ async function createRepository(token, repoData) {
   }
 
   return await response.json();
+}
+
+/**
+ * Create branch protection ruleset for a repository
+ */
+async function createBranchProtectionRuleset(token, repoName) {
+  const url = `${GITHUB_API_BASE}/repos/${ORG_NAME}/${repoName}/rulesets`;
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(STANDARD_BRANCH_RULESET),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`GitHub API error (${response.status}): ${error}`);
+  }
+
+  return await response.json();
+}
+
+/**
+ * Update repository settings to match standard configuration
+ */
+async function updateRepositorySettings(token, repoName) {
+  const url = `${GITHUB_API_BASE}/repos/${ORG_NAME}/${repoName}`;
+
+  const response = await fetch(url, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(STANDARD_REPO_SETTINGS),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`GitHub API error (${response.status}): ${error}`);
+  }
+
+  return await response.json();
+}
+
+/**
+ * Ensure repository has standard configuration
+ * Updates settings and creates ruleset if missing
+ */
+async function ensureStandardConfiguration(token, repoName) {
+  // Update repository settings to match standard
+  await updateRepositorySettings(token, repoName);
+
+  // Check if ruleset exists
+  const rulesetsUrl = `${GITHUB_API_BASE}/repos/${ORG_NAME}/${repoName}/rulesets`;
+  const rulesetsResponse = await fetch(rulesetsUrl, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+    },
+  });
+
+  if (!rulesetsResponse.ok) {
+    throw new Error(`Failed to fetch rulesets: ${rulesetsResponse.status}`);
+  }
+
+  const rulesets = await rulesetsResponse.json();
+  const existingRuleset = rulesets.find(
+    (r) => r.name === STANDARD_BRANCH_RULESET.name
+  );
+
+  if (!existingRuleset) {
+    // Create new ruleset
+    await createBranchProtectionRuleset(token, repoName);
+  }
 }
 
 /**
@@ -232,7 +364,7 @@ async function addInitializeActions(token, plan, actualRepos, desiredRepos) {
 /**
  * Generate sync plan from drift
  */
-function generateSyncPlan(drift) {
+function generateSyncPlan(drift, desiredRepos) {
   // Protected repositories that should never be deleted
   const PROTECTED_REPOS = ['documentation', 'core', 'webapp'];
 
@@ -243,6 +375,7 @@ function generateSyncPlan(drift) {
       updateDescription: 0,
       updateTopics: 0,
       initialize: 0,
+      ensureSettings: 0,
       delete: 0,
       skip: 0,
     },
@@ -278,6 +411,19 @@ function generateSyncPlan(drift) {
       to: diff.desired,
     });
     plan.summary.updateTopics++;
+  }
+
+  // Ensure standard settings for all existing repos (not being created or deleted)
+  for (const repo of desiredRepos) {
+    // Skip repos being created (they get settings during creation)
+    const isBeingCreated = drift.missing.some((r) => r.name === repo.name);
+    if (!isBeingCreated) {
+      plan.actions.push({
+        type: 'ensure-settings',
+        repo: repo.name,
+      });
+      plan.summary.ensureSettings++;
+    }
   }
 
   // Delete extra repos (unless protected)
@@ -335,12 +481,16 @@ async function executeSyncPlan(token, plan, dryRun) {
       switch (action.type) {
         case 'create':
           result = await createRepository(token, action.data);
-          // Create initial commit so repository can be forked
-          await createInitialCommit(token, action.data.name, action.data.description);
+          // Apply branch protection after creation (main branch now exists via auto_init)
+          await createBranchProtectionRuleset(token, action.data.name);
           // After creating, set topics if they exist
           if (action.data.topics && action.data.topics.length > 0) {
             await updateRepositoryTopics(token, action.data.name, action.data.topics);
           }
+          break;
+
+        case 'ensure-settings':
+          result = await ensureStandardConfiguration(token, action.repo);
           break;
 
         case 'initialize':
@@ -399,6 +549,7 @@ function formatSyncReport(plan, results, dryRun) {
   lines.push(`- Update descriptions: ${plan.summary.updateDescription}`);
   lines.push(`- Update topics: ${plan.summary.updateTopics}`);
   lines.push(`- Initialize (add first commit): ${plan.summary.initialize}`);
+  lines.push(`- Ensure settings: ${plan.summary.ensureSettings}`);
   lines.push(`- Delete: ${plan.summary.delete}`);
   lines.push(`- Skip (protected): ${plan.summary.skip}`);
   lines.push('');
@@ -434,6 +585,11 @@ function formatSyncReport(plan, results, dryRun) {
         case 'initialize':
           lines.push(`- **Initialize** \`${action.repo}\` (create first commit)`);
           lines.push(`  - Description: ${action.description}`);
+          break;
+
+        case 'ensure-settings':
+          lines.push(`- **Ensure settings** for \`${action.repo}\``);
+          lines.push(`  - Applied standard configuration`);
           break;
 
         case 'delete':
@@ -509,7 +665,7 @@ async function main() {
 
     // Generate sync plan
     console.error('📋 Generating sync plan...');
-    const plan = generateSyncPlan(drift);
+    const plan = generateSyncPlan(drift, desiredRepos);
 
     // Check for empty repositories and add initialize actions
     console.error('🔍 Checking for empty repositories...');
