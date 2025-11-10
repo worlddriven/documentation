@@ -1,6 +1,23 @@
 # Worlddriven Organization Repositories
 
-This file serves as the source of truth for all repositories in the worlddriven GitHub organization. Changes to this file via pull requests will automatically sync the organization structure through democratic voting.
+This file is the **source of truth** for all repositories in the worlddriven GitHub organization. Changes to this file democratically control our infrastructure through automated synchronization.
+
+## How It Works
+
+**When you create a PR modifying this file:**
+- GitHub Actions automatically runs drift detection
+- A comment appears showing exactly what will change (repositories to create, update, or delete)
+- You can review the impact before the PR merges
+
+**When your PR merges to main:**
+- Sync automation applies changes to GitHub organization
+- Repositories are created, updated, or deleted to match this file
+- A commit comment shows the sync results
+- If failures occur, an issue is automatically created
+
+**Protected repositories** (documentation, core, webapp) cannot be auto-deleted but can be updated.
+
+**Learn more**: [AUTOMATION.md](AUTOMATION.md) - Complete automation documentation
 
 ## Format
 

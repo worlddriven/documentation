@@ -7,30 +7,17 @@
 Open source software powers the modern world, yet its governance remains fundamentally undemocratic. This creates critical vulnerabilities that threaten the sustainability and integrity of projects we all depend on.
 
 ### Maintainer Bottlenecks
-- **58% of maintainers** have abandoned projects or considered doing so due to burnout
-- **22% have already left**, with 36% actively considering it
-- Over **three-quarters receive no financial compensation** for their work
-- Projects die when single maintainers become overwhelmed or move on
+- **58% of maintainers** have abandoned or considered abandoning projects due to burnout
+- Over **three-quarters receive no compensation** while projects die when they become overwhelmed
 
 ### Ignored Contributors
-Research reveals a "wasteland of good patches that were completely ignored," where contributors:
-- Submit valuable improvements that receive no response
-- Ping maintainers multiple times before giving up
-- Abandon participation due to systematic neglect
-- Face barriers that prevent democratic participation in projects they care about
+Research reveals a "wasteland of good patches that were completely ignored"—valuable improvements receive no response, leading contributors to abandon participation and creating barriers to democratic involvement.
 
 ### Corporate Takeovers
-- **MongoDB, Redis, and others** changed licenses to prevent corporate exploitation
-- **Docker governance tensions** between project and company interests
-- **Foundation vs. company-led models** create ongoing conflicts over control
-- License changes effectively privatize community work
+Projects like **MongoDB and Redis** changed licenses to prevent exploitation, creating **governance tensions** between community interests and corporate control. License changes can effectively privatize community work.
 
 ### Fork Wars
-Famous conflicts that split communities and waste resources:
-- **GCC/EGCS split** due to maintainer disagreements (eventually resolved)
-- **GNU Emacs/XEmacs** division over project direction
-- **BSD fragmentation** into FreeBSD, NetBSD, and OpenBSD
-- Personal conflicts creating unnecessary project duplication
+Famous conflicts like **GCC/EGCS**, **Emacs/XEmacs**, and **BSD fragmentation** split communities and waste resources due to maintainer disagreements over project direction.
 
 ## What is Worlddriven?
 
@@ -52,19 +39,35 @@ Pull requests automatically merge after a configurable time period (default: 10 
 ### Eliminates Single Points of Failure
 No more projects dying because one maintainer burns out. The community collectively shoulders both the burden and benefits of project stewardship.
 
+## Organization Management
+
+This repository practices what it preaches: **the worlddriven organization itself is managed democratically through pull requests**. Infrastructure decisions follow the same democratic process as code.
+
+### How It Works
+- **[REPOSITORIES.md](REPOSITORIES.md)** defines all repositories in our organization
+- Proposed changes create pull requests that show exactly what will change
+- After democratic review and merge, automation applies changes to GitHub
+- All infrastructure decisions are transparent, reversible, and community-driven
+
+### Democratic Infrastructure
+Our automation enforces:
+- Standard configurations for democratic governance (squash-only merges, branch protection)
+- Protected critical repositories (documentation, core, webapp)
+- Transparent sync reports showing all changes
+
+**Learn more**: [AUTOMATION.md](AUTOMATION.md) - Complete guide to our infrastructure automation
+
+**Current repositories**: [View on GitHub](https://github.com/orgs/worlddriven/repositories)
+
 ## Real-World Examples Where Worlddriven Would Help
 
-### Redis Creator's Departure
-Salvatore Sanfilippo, Redis founder, stepped down in 2020 saying: "I'm asked more and more to express myself less and to maintain the project more. This is not what I want to do." Worlddriven would have distributed this maintenance burden across the contributor community.
+**Redis Creator's Departure**: Salvatore Sanfilippo stepped down in 2020, saying "I'm asked more and more to maintain the project more. This is not what I want to do." Worlddriven distributes maintenance burden across the contributor community.
 
-### The Ignored Patch Problem
-Many projects show systematic failures where good contributions are ignored, leading to contributor abandonment. Worlddriven's automatic merge system ensures every contribution gets proper consideration and resolution.
+**Ignored Patches**: Many projects systematically ignore good contributions, leading to contributor abandonment. Worlddriven's automatic merge system ensures every contribution gets proper consideration.
 
-### MongoDB License Controversy
-When MongoDB changed to SSPL to prevent cloud vendor exploitation, it created uncertainty for users. Worlddriven's democratic process would have allowed the community to collectively decide on license changes based on contributor consensus.
+**MongoDB License Change**: When MongoDB changed to SSPL to prevent cloud vendor exploitation, it created uncertainty. Worlddriven's democratic process would let the community collectively decide license changes.
 
-### GCC/EGCS Success Story
-The GCC/EGCS fork eventually reunited when it became clear EGCS had better community support. Worlddriven's voting system would have revealed this preference earlier, preventing the fork entirely and focusing energy on collaborative improvement.
+**GCC/EGCS Fork**: This split eventually reunited when EGCS had better community support. Worlddriven's voting would have revealed this preference earlier, preventing the fork entirely.
 
 ## The Responsibility Model
 
@@ -82,17 +85,13 @@ Veteran contributors become democratic leaders who guide through influence and e
 
 ## How Worlddriven Changes the Game
 
-### From Spectator to Stakeholder
-Traditional open source asks you to submit patches and hope they're accepted. Worlddriven makes you an immediate stakeholder with both power and responsibility for project success.
+**From Spectator to Stakeholder**: Your first contribution makes you an immediate stakeholder with both power and responsibility for project success.
 
-### Prevents Corporate Capture
-When the community collectively owns decision-making, no single entity can unilaterally change licenses, direction, or governance. Contributors who built the project retain democratic control.
+**Prevents Corporate Capture**: Collective decision-making means no single entity can unilaterally change licenses, direction, or governance.
 
-### Reduces Fork Necessity
-Disagreements get resolved through democratic process rather than community fragmentation. Energy focuses on collaborative improvement instead of competing implementations.
+**Reduces Fork Necessity**: Disagreements resolve through democratic process rather than community fragmentation, focusing energy on collaborative improvement.
 
-### Sustainable Participation
-By distributing both power and responsibility, worlddriven creates sustainable participation models that don't depend on individual heroics or burnout-prone maintainership.
+**Sustainable Participation**: Distributing power and responsibility creates sustainable models that don't depend on individual heroics or burnout-prone maintainership.
 
 ## The Vision: Three Phases
 
@@ -116,17 +115,13 @@ By distributing both power and responsibility, worlddriven creates sustainable p
 
 ## Why Now?
 
-### The Crisis is Real
-Open source faces a sustainability crisis with widespread maintainer burnout, corporate capture of community projects, and a democratic deficit in software that runs the world's infrastructure.
+**The Crisis is Real**: Open source faces widespread maintainer burnout, corporate capture, and a democratic deficit in software running the world's infrastructure.
 
-### The Infrastructure Exists
-GitHub and GitLab provide the technical foundation. The challenge isn't technical—it's governance. Worlddriven solves the governance problem.
+**The Infrastructure Exists**: GitHub and GitLab provide the technical foundation. The challenge is governance—which worlddriven solves.
 
-### Community Readiness
-Growing awareness of open source governance problems creates demand for solutions. Contributors want meaningful participation, not just code submission privileges.
+**Community Readiness**: Growing awareness of governance problems creates demand for solutions. Contributors want meaningful participation, not just code submission privileges.
 
-### Proven Principles
-Democratic governance works in other contexts. Worlddriven adapts these principles for software development, creating accountability through transparency and shared ownership.
+**Proven Principles**: Democratic governance works in other contexts. Worlddriven adapts these principles for software, creating accountability through transparency and shared ownership.
 
 ## Get Started
 
@@ -140,6 +135,6 @@ Visit [www.worlddriven.org](https://www.worlddriven.org) to enable worlddriven f
 - [Responsibility Model](RESPONSIBILITY.md) - How contributor power and accountability scale together
 - [Real-World Examples](EXAMPLES.md) - Detailed case studies of governance failures worlddriven prevents
 - [Philosophy](PHILOSOPHY.md) - Democratic software development principles
-- [Vision](VISION.md) - The three-phase roadmap to self-governing software
+- [Automation](AUTOMATION.md) - How this organization manages itself democratically
 
 *Technical implementation details are available in the [core repository](../core/README.md).*
