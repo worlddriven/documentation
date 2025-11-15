@@ -185,6 +185,41 @@ Here's an example:
     assert.strictEqual(result[0].topics, undefined);
   });
 
+  test('should parse repository with origin field for migration', () => {
+    const content = `
+## core
+- Description: Democratic governance system for GitHub pull requests
+- Topics: democracy, open-source, governance
+- Origin: TooAngel/worlddriven
+`;
+    const result = parseRepositories(content);
+    assert.deepStrictEqual(result, [
+      {
+        name: 'core',
+        description: 'Democratic governance system for GitHub pull requests',
+        topics: ['democracy', 'open-source', 'governance'],
+        origin: 'TooAngel/worlddriven'
+      }
+    ]);
+  });
+
+  test('should parse multiple repositories with and without origin', () => {
+    const content = `
+## documentation
+- Description: Core documentation repository
+- Topics: documentation, worlddriven
+
+## core
+- Description: Democratic governance system
+- Topics: governance
+- Origin: TooAngel/worlddriven
+`;
+    const result = parseRepositories(content);
+    assert.strictEqual(result.length, 2);
+    assert.strictEqual(result[0].origin, undefined);
+    assert.strictEqual(result[1].origin, 'TooAngel/worlddriven');
+  });
+
   test('should match actual REPOSITORIES.md structure', () => {
     const content = `# Worlddriven Organization Repositories
 
