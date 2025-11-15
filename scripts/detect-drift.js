@@ -29,6 +29,7 @@ function detectDrift(desiredRepos, actualRepos) {
     extra: [],          // In GitHub but not in REPOSITORIES.md
     descriptionDiff: [], // Description mismatch
     topicsDiff: [],     // Topics mismatch
+    pendingTransfer: [], // Repositories with origin field (not yet implemented)
   };
 
   // Create lookup maps
@@ -38,6 +39,12 @@ function detectDrift(desiredRepos, actualRepos) {
   // Find missing and different repos
   for (const desired of desiredRepos) {
     const actual = actualMap.get(desired.name);
+
+    // Check for origin field (repository transfer - not yet implemented)
+    if (desired.origin) {
+      drift.pendingTransfer.push(desired);
+      continue; // Skip other checks for transfer repos
+    }
 
     if (!actual) {
       drift.missing.push(desired);
@@ -86,7 +93,8 @@ function formatDriftReport(drift, desiredCount, actualCount) {
   const hasDrift = drift.missing.length > 0 ||
                    drift.extra.length > 0 ||
                    drift.descriptionDiff.length > 0 ||
-                   drift.topicsDiff.length > 0;
+                   drift.topicsDiff.length > 0 ||
+                   drift.pendingTransfer.length > 0;
 
   if (!hasDrift) {
     lines.push('✅ **No drift detected** - REPOSITORIES.md matches GitHub organization state');
@@ -95,6 +103,21 @@ function formatDriftReport(drift, desiredCount, actualCount) {
 
   lines.push('⚠️ **Drift detected** - Differences found between REPOSITORIES.md and GitHub');
   lines.push('');
+
+  // Pending transfers (not yet implemented)
+  if (drift.pendingTransfer.length > 0) {
+    lines.push(`## 🚧 Repository Transfer Pending (${drift.pendingTransfer.length})`);
+    lines.push('');
+    lines.push('⚠️ **FEATURE NOT YET IMPLEMENTED** - These repositories have an `Origin` field for migration:');
+    lines.push('');
+    for (const repo of drift.pendingTransfer) {
+      lines.push(`- **${repo.name}** ← \`${repo.origin}\``);
+      lines.push(`  - Description: ${repo.description}`);
+      lines.push(`  - **Action required**: Repository transfer automation is not yet implemented`);
+      lines.push(`  - See issue for implementation progress and manual transfer instructions`);
+    }
+    lines.push('');
+  }
 
   // Missing repositories
   if (drift.missing.length > 0) {
@@ -173,10 +196,17 @@ async function main() {
     console.log(report);
 
     // Exit with error code if drift detected (useful for CI)
+    // Note: pendingTransfer is informational, not an error
     const hasDrift = drift.missing.length > 0 ||
                      drift.extra.length > 0 ||
                      drift.descriptionDiff.length > 0 ||
                      drift.topicsDiff.length > 0;
+
+    // Warn about pending transfers
+    if (drift.pendingTransfer.length > 0) {
+      console.error('\n⚠️  Warning: Repository transfer feature is not yet implemented');
+      console.error('   PRs with Origin field cannot be merged until implementation is complete');
+    }
 
     process.exit(hasDrift ? 1 : 0);
   } catch (error) {

@@ -34,6 +34,7 @@ Each repository is defined using markdown headers and properties:
 - **Repository Name**: Markdown heading level 2 (`##`)
 - **Description** (required): Brief description of the repository's purpose
 - **Topics** (optional): Comma-separated list of repository topics for discoverability
+- **Origin** (optional, not yet implemented): Source repository for migration (e.g., `owner/repo-name`)
 
 ## Example
 
@@ -46,6 +47,25 @@ Each repository is defined using markdown headers and properties:
 - Description: Vision, philosophy, and organization management for worlddriven
 - Topics: documentation, organization-management, governance
 ```
+
+## Repository Migration (Coming Soon)
+
+🚧 **Feature in development** - Repository transfer automation is not yet implemented.
+
+The `Origin` field will enable migrating repositories from "powered by worlddriven" to "worlddriven project":
+
+- **Powered by worlddriven**: Repository stays under owner's control, uses worlddriven for PR automation
+- **Worlddriven project**: Repository lives in worlddriven org with full democratic governance
+
+**Planned workflow** (not yet functional):
+1. Origin repository owner grants admin permissions to worlddriven org
+2. Add repository to REPOSITORIES.md with `Origin: owner/repo-name`
+3. Drift detection verifies permissions
+4. On merge, repository automatically transfers to worlddriven org
+5. Standard democratic configurations applied
+
+**Current status**: Parser supports Origin field, transfer logic pending implementation.
+Track progress in the GitHub issue for repository migration feature.
 
 ---
 

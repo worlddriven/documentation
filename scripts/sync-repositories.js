@@ -663,6 +663,19 @@ async function main() {
     console.error('🔍 Detecting drift...');
     const drift = detectDrift(desiredRepos, actualRepos);
 
+    // Check for pending transfers (not yet implemented)
+    if (drift.pendingTransfer && drift.pendingTransfer.length > 0) {
+      console.error('');
+      console.error('🚧 WARNING: Repository transfer feature not yet implemented');
+      console.error(`   Found ${drift.pendingTransfer.length} repository(ies) with Origin field:`);
+      for (const repo of drift.pendingTransfer) {
+        console.error(`   - ${repo.name} ← ${repo.origin}`);
+      }
+      console.error('   These repositories will be SKIPPED until transfer feature is implemented');
+      console.error('   See GitHub issue for implementation progress');
+      console.error('');
+    }
+
     // Generate sync plan
     console.error('📋 Generating sync plan...');
     const plan = generateSyncPlan(drift, desiredRepos);
