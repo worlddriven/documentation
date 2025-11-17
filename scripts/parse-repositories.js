@@ -15,7 +15,7 @@ const __dirname = dirname(__filename);
 /**
  * Parse markdown content and extract repository definitions
  * @param {string} content - Markdown content
- * @returns {Array<{name: string, description: string, topics?: string[]}>}
+ * @returns {Array<{name: string, description: string, topics?: string[], origin?: string}>}
  */
 function parseRepositories(content) {
   const repositories = [];
@@ -67,6 +67,8 @@ function parseRepositories(content) {
           currentRepo.description = value.trim();
         } else if (keyLower === 'topics') {
           currentRepo.topics = value.split(',').map(t => t.trim()).filter(Boolean);
+        } else if (keyLower === 'origin') {
+          currentRepo.origin = value.trim();
         }
       }
     }
