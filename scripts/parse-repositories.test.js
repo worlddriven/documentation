@@ -12,6 +12,8 @@ describe('parseRepositories', () => {
 
   test('should parse a single repository with description', () => {
     const content = `
+## Current Repositories
+
 ## my-repo
 - Description: A test repository
 `;
@@ -26,6 +28,8 @@ describe('parseRepositories', () => {
 
   test('should parse repository with description and topics', () => {
     const content = `
+## Current Repositories
+
 ## my-repo
 - Description: A test repository
 - Topics: topic1, topic2, topic3
@@ -42,6 +46,8 @@ describe('parseRepositories', () => {
 
   test('should parse multiple repositories', () => {
     const content = `
+## Current Repositories
+
 ## repo-one
 - Description: First repository
 - Topics: topic1
@@ -81,6 +87,8 @@ Example:
 
   test('should skip repositories without descriptions', () => {
     const content = `
+## Current Repositories
+
 ## valid-repo
 - Description: Valid repository
 
@@ -101,6 +109,8 @@ Example:
 ## Example
 - Description: This should be skipped
 
+## Current Repositories
+
 ## real-repo
 - Description: This is real
 `;
@@ -113,6 +123,8 @@ Example:
     const content = `
 ## Format
 - Description: This should be skipped
+
+## Current Repositories
 
 ## real-repo
 - Description: This is real
@@ -168,6 +180,8 @@ Here's an example:
 
   test('should handle topics with extra whitespace', () => {
     const content = `
+## Current Repositories
+
 ## my-repo
 - Description: Test repository
 - Topics:  topic1 ,  topic2  , topic3
@@ -178,6 +192,8 @@ Here's an example:
 
   test('should handle repositories without topics', () => {
     const content = `
+## Current Repositories
+
 ## my-repo
 - Description: Test repository without topics
 `;
@@ -187,6 +203,8 @@ Here's an example:
 
   test('should parse repository with origin field for migration', () => {
     const content = `
+## Current Repositories
+
 ## core
 - Description: Democratic governance system for GitHub pull requests
 - Topics: democracy, open-source, governance
@@ -205,6 +223,8 @@ Here's an example:
 
   test('should parse multiple repositories with and without origin', () => {
     const content = `
+## Current Repositories
+
 ## documentation
 - Description: Core documentation repository
 - Topics: documentation, worlddriven

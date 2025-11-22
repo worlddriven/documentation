@@ -23,6 +23,7 @@ function parseRepositories(content) {
 
   let currentRepo = null;
   let inCodeBlock = false;
+  let inRepositoriesSection = false;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
@@ -38,8 +39,14 @@ function parseRepositories(content) {
       continue;
     }
 
-    // Repository name (## heading)
-    if (line.startsWith('## ')) {
+    // Check for "Current Repositories" marker
+    if (line.startsWith('## ') && line.toLowerCase().includes('current repositories')) {
+      inRepositoriesSection = true;
+      continue;
+    }
+
+    // Repository name (## heading) - only after "Current Repositories" section
+    if (line.startsWith('## ') && inRepositoriesSection) {
       // Save previous repo if exists
       if (currentRepo) {
         repositories.push(currentRepo);
@@ -47,14 +54,7 @@ function parseRepositories(content) {
 
       // Start new repo
       const name = line.substring(3).trim();
-      // Skip example headings or special sections
-      if (name && !name.toLowerCase().includes('example') &&
-          !name.toLowerCase().includes('current repositories') &&
-          !name.toLowerCase().includes('format')) {
-        currentRepo = { name };
-      } else {
-        currentRepo = null;
-      }
+      currentRepo = { name };
     }
     // Properties (- Key: Value)
     else if (currentRepo && line.startsWith('- ')) {

@@ -48,24 +48,60 @@ Each repository is defined using markdown headers and properties:
 - Topics: documentation, organization-management, governance
 ```
 
-## Repository Migration (Coming Soon)
+## Repository Migration
 
-🚧 **Feature in development** - Repository transfer automation is not yet implemented.
+🚧 **Feature partially implemented** - Permission verification complete, transfer API pending.
 
-The `Origin` field will enable migrating repositories from "powered by worlddriven" to "worlddriven project":
+The `Origin` field enables migrating repositories from "powered by worlddriven" to "worlddriven project":
 
 - **Powered by worlddriven**: Repository stays under owner's control, uses worlddriven for PR automation
 - **Worlddriven project**: Repository lives in worlddriven org with full democratic governance
 
-**Planned workflow** (not yet functional):
-1. Origin repository owner grants admin permissions to worlddriven org
-2. Add repository to REPOSITORIES.md with `Origin: owner/repo-name`
-3. Drift detection verifies permissions
-4. On merge, repository automatically transfers to worlddriven org
-5. Standard democratic configurations applied
+### How to Grant Transfer Permissions
 
-**Current status**: Parser supports Origin field, transfer logic pending implementation.
-Track progress in the GitHub issue for repository migration feature.
+Before adding a repository with an `Origin` field, the repository owner must grant worlddriven admin access:
+
+1. **Navigate to repository settings**: `https://github.com/OWNER/REPO/settings/access`
+2. **Invite collaborator**: Click "Add people" or "Add teams"
+3. **Add worlddriven org**: Search for and select "worlddriven"
+4. **Grant admin role**: Select "Admin" permission level
+5. **Confirm invitation**: worlddriven org will automatically accept
+
+**Why admin access?** GitHub's transfer API requires admin permission on the source repository to initiate a transfer.
+
+### Migration Workflow
+
+**Current implementation** (permission verification):
+1. ✅ Repository owner grants worlddriven admin access to origin repository
+2. ✅ Add repository to REPOSITORIES.md with `Origin: owner/repo-name`
+3. ✅ Drift detection automatically checks if worlddriven has admin permission
+4. ✅ PR comments show permission status: "Ready" or "Blocked"
+5. 🚧 On merge, repository transfer (API implementation pending)
+
+**What's implemented:**
+- ✅ Parser supports Origin field
+- ✅ Permission verification via GitHub API
+- ✅ Clear feedback in drift detection and PR comments
+- 🚧 Transfer API call (pending - see issue #9)
+
+**What happens when you add Origin field:**
+- Drift detection checks if worlddriven has admin access to origin repo
+- PR comment shows: ✅ "Ready to transfer" or ❌ "Missing admin permission"
+- If permission missing, PR comment includes instructions for granting access
+- Transfer action appears in sync plan (but won't execute until API is implemented)
+
+### Example
+
+```markdown
+## my-project
+- Description: My awesome democratic project
+- Topics: worlddriven, democracy
+- Origin: myusername/my-project
+```
+
+**Before adding**: Grant worlddriven admin access to `myusername/my-project`
+
+Track implementation progress in GitHub issue #9.
 
 ---
 
