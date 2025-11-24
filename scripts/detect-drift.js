@@ -7,6 +7,7 @@
 
 import { parseRepositoriesFile } from './parse-repositories.js';
 import { fetchGitHubRepositories } from './fetch-github-state.js';
+import { checkMultipleTransferPermissions } from './check-transfer-permissions.js';
 
 /**
  * Compare two arrays of topics
@@ -22,14 +23,18 @@ function arraysEqual(a, b) {
 
 /**
  * Detect differences between desired and actual repository states
+ * @param {Array} desiredRepos - Repositories defined in REPOSITORIES.md
+ * @param {Array} actualRepos - Repositories in GitHub organization
+ * @param {Map} transferPermissions - Optional map of origin repo to permission results
  */
-function detectDrift(desiredRepos, actualRepos) {
+function detectDrift(desiredRepos, actualRepos, transferPermissions = new Map()) {
   const drift = {
     missing: [],        // In REPOSITORIES.md but not in GitHub
     extra: [],          // In GitHub but not in REPOSITORIES.md
     descriptionDiff: [], // Description mismatch
     topicsDiff: [],     // Topics mismatch
-    pendingTransfer: [], // Repositories with origin field (not yet implemented)
+    pendingTransfer: [], // Repositories with origin field
+    transferPermissions, // Permission status for repositories with origin
   };
 
   // Create lookup maps
@@ -104,18 +109,34 @@ function formatDriftReport(drift, desiredCount, actualCount) {
   lines.push('⚠️ **Drift detected** - Differences found between REPOSITORIES.md and GitHub');
   lines.push('');
 
-  // Pending transfers (not yet implemented)
+  // Pending transfers
   if (drift.pendingTransfer.length > 0) {
     lines.push(`## 🚧 Repository Transfer Pending (${drift.pendingTransfer.length})`);
     lines.push('');
-    lines.push('⚠️ **FEATURE NOT YET IMPLEMENTED** - These repositories have an `Origin` field for migration:');
+    lines.push('⚠️ **TRANSFER FEATURE IN DEVELOPMENT** - These repositories have an `Origin` field for migration:');
     lines.push('');
     for (const repo of drift.pendingTransfer) {
+      const permission = drift.transferPermissions.get(repo.origin);
+
       lines.push(`- **${repo.name}** ← \`${repo.origin}\``);
       lines.push(`  - Description: ${repo.description}`);
-      lines.push(`  - **Action required**: Repository transfer automation is not yet implemented`);
-      lines.push(`  - See issue for implementation progress and manual transfer instructions`);
+
+      if (permission) {
+        if (permission.hasPermission) {
+          lines.push(`  - ✅ **Permission Status**: ${permission.details}`);
+          lines.push(`  - **Ready for transfer** (once transfer automation is complete)`);
+        } else {
+          lines.push(`  - ❌ **Permission Status**: ${permission.details}`);
+          lines.push(`  - **Action required**: Grant worlddriven admin access to ${repo.origin}`);
+          lines.push(`  - See REPOSITORIES.md for instructions on granting permissions`);
+        }
+      } else {
+        lines.push(`  - ⚠️ **Permission Status**: Not checked`);
+        lines.push(`  - Run drift detection to verify permissions`);
+      }
     }
+    lines.push('');
+    lines.push('**Note**: Transfer automation is under development. See issue #9 for progress.');
     lines.push('');
   }
 
@@ -188,9 +209,19 @@ async function main() {
     console.error('🌐 Fetching GitHub organization state...');
     const actualRepos = await fetchGitHubRepositories(token);
 
+    // Check permissions for repositories with origin field
+    const reposWithOrigin = desiredRepos.filter(r => r.origin);
+    let transferPermissions = new Map();
+
+    if (reposWithOrigin.length > 0) {
+      console.error('🔐 Checking transfer permissions...');
+      const originRepos = reposWithOrigin.map(r => r.origin);
+      transferPermissions = await checkMultipleTransferPermissions(token, originRepos);
+    }
+
     console.error('🔍 Detecting drift...\n');
 
-    const drift = detectDrift(desiredRepos, actualRepos);
+    const drift = detectDrift(desiredRepos, actualRepos, transferPermissions);
     const report = formatDriftReport(drift, desiredRepos.length, actualRepos.length);
 
     console.log(report);
@@ -204,8 +235,21 @@ async function main() {
 
     // Warn about pending transfers
     if (drift.pendingTransfer.length > 0) {
-      console.error('\n⚠️  Warning: Repository transfer feature is not yet implemented');
-      console.error('   PRs with Origin field cannot be merged until implementation is complete');
+      console.error('\n⚠️  Warning: Repository transfer feature is under development');
+      console.error('   PRs with Origin field will be blocked until transfer automation is complete');
+
+      // Check permission status
+      const readyCount = drift.pendingTransfer.filter(
+        r => drift.transferPermissions.get(r.origin)?.hasPermission
+      ).length;
+      const blockedCount = drift.pendingTransfer.length - readyCount;
+
+      if (readyCount > 0) {
+        console.error(`   ✅ ${readyCount} repository(ies) ready (admin permission granted)`);
+      }
+      if (blockedCount > 0) {
+        console.error(`   ❌ ${blockedCount} repository(ies) blocked (missing admin permission)`);
+      }
     }
 
     process.exit(hasDrift ? 1 : 0);

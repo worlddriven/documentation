@@ -11,6 +11,7 @@
 import { parseRepositoriesFile } from './parse-repositories.js';
 import { fetchGitHubRepositories } from './fetch-github-state.js';
 import { detectDrift } from './detect-drift.js';
+import { checkMultipleTransferPermissions } from './check-transfer-permissions.js';
 
 const GITHUB_API_BASE = 'https://api.github.com';
 const ORG_NAME = 'worlddriven';
@@ -378,8 +379,37 @@ function generateSyncPlan(drift, desiredRepos) {
       ensureSettings: 0,
       delete: 0,
       skip: 0,
+      transfer: 0,
+      transferBlocked: 0,
     },
   };
+
+  // Handle pending transfers (repositories with origin field)
+  for (const repo of drift.pendingTransfer || []) {
+    const permission = drift.transferPermissions.get(repo.origin);
+
+    if (permission && permission.hasPermission) {
+      // Permission granted - add to transfer queue (not yet implemented)
+      plan.actions.push({
+        type: 'transfer',
+        repo: repo.name,
+        origin: repo.origin,
+        data: repo,
+        hasPermission: true,
+      });
+      plan.summary.transfer++;
+    } else {
+      // Permission not granted or check failed - skip with reason
+      plan.actions.push({
+        type: 'skip',
+        repo: repo.name,
+        reason: permission
+          ? `Transfer blocked: ${permission.details}`
+          : 'Transfer blocked: Permission check failed',
+      });
+      plan.summary.transferBlocked++;
+    }
+  }
 
   // Create missing repositories
   for (const repo of drift.missing) {
@@ -509,6 +539,10 @@ async function executeSyncPlan(token, plan, dryRun) {
           result = await deleteRepository(token, action.repo);
           break;
 
+        case 'transfer':
+          // Transfer API not yet implemented
+          throw new Error('Repository transfer is not yet implemented. See issue #9 for progress.');
+
         default:
           throw new Error(`Unknown action type: ${action.type}`);
       }
@@ -551,6 +585,12 @@ function formatSyncReport(plan, results, dryRun) {
   lines.push(`- Initialize (add first commit): ${plan.summary.initialize}`);
   lines.push(`- Ensure settings: ${plan.summary.ensureSettings}`);
   lines.push(`- Delete: ${plan.summary.delete}`);
+  if (plan.summary.transfer > 0) {
+    lines.push(`- Transfer (ready): ${plan.summary.transfer}`);
+  }
+  if (plan.summary.transferBlocked > 0) {
+    lines.push(`- Transfer (blocked): ${plan.summary.transferBlocked}`);
+  }
   lines.push(`- Skip (protected): ${plan.summary.skip}`);
   lines.push('');
 
@@ -596,6 +636,15 @@ function formatSyncReport(plan, results, dryRun) {
           lines.push(`- **Delete** \`${action.repo}\``);
           if (action.data.description) {
             lines.push(`  - Description: ${action.data.description}`);
+          }
+          break;
+
+        case 'transfer':
+          lines.push(`- **Transfer** \`${action.origin}\` → \`${ORG_NAME}/${action.repo}\``);
+          lines.push(`  - Description: ${action.data.description}`);
+          lines.push(`  - ⚠️ **Not yet implemented** - Transfer API call pending`);
+          if (action.data.topics && action.data.topics.length > 0) {
+            lines.push(`  - Topics: ${action.data.topics.join(', ')}`);
           }
           break;
       }
@@ -659,20 +708,44 @@ async function main() {
     console.error('🌐 Fetching GitHub organization state...');
     const actualRepos = await fetchGitHubRepositories(token);
 
+    // Check permissions for repositories with origin field
+    const reposWithOrigin = desiredRepos.filter(r => r.origin);
+    let transferPermissions = new Map();
+
+    if (reposWithOrigin.length > 0) {
+      console.error('🔐 Checking transfer permissions...');
+      const originRepos = reposWithOrigin.map(r => r.origin);
+      transferPermissions = await checkMultipleTransferPermissions(token, originRepos);
+    }
+
     // Detect drift
     console.error('🔍 Detecting drift...');
-    const drift = detectDrift(desiredRepos, actualRepos);
+    const drift = detectDrift(desiredRepos, actualRepos, transferPermissions);
 
-    // Check for pending transfers (not yet implemented)
+    // Check for pending transfers
     if (drift.pendingTransfer && drift.pendingTransfer.length > 0) {
       console.error('');
-      console.error('🚧 WARNING: Repository transfer feature not yet implemented');
+      console.error('🚧 INFO: Repository transfer feature under development');
       console.error(`   Found ${drift.pendingTransfer.length} repository(ies) with Origin field:`);
+
+      const readyCount = drift.pendingTransfer.filter(
+        r => drift.transferPermissions.get(r.origin)?.hasPermission
+      ).length;
+      const blockedCount = drift.pendingTransfer.length - readyCount;
+
       for (const repo of drift.pendingTransfer) {
-        console.error(`   - ${repo.name} ← ${repo.origin}`);
+        const permission = drift.transferPermissions.get(repo.origin);
+        const status = permission?.hasPermission ? '✅' : '❌';
+        console.error(`   ${status} ${repo.name} ← ${repo.origin}`);
       }
-      console.error('   These repositories will be SKIPPED until transfer feature is implemented');
-      console.error('   See GitHub issue for implementation progress');
+
+      if (readyCount > 0) {
+        console.error(`   ✅ ${readyCount} ready for transfer (admin permission granted)`);
+      }
+      if (blockedCount > 0) {
+        console.error(`   ❌ ${blockedCount} blocked (missing admin permission)`);
+      }
+      console.error('   Transfer API implementation pending - see issue #9');
       console.error('');
     }
 
