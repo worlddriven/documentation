@@ -109,6 +109,11 @@ Track implementation progress in GitHub issue #9.
 
 <!-- Add repositories below this line -->
 
+## core
+- Description: Democratic governance system for GitHub pull requests
+- Topics: democracy, open-source, governance, automation, worlddriven
+- Origin: TooAngel/worlddriven
+
 ## documentation
 - Description: Core documentation repository for worlddriven project
 - Topics: documentation, worlddriven
