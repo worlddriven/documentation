@@ -227,16 +227,17 @@ async function main() {
     console.log(report);
 
     // Exit with error code if drift detected (useful for CI)
-    // Note: pendingTransfer is informational, not an error
+    // Note: pendingTransfer blocks CI until transfer automation is implemented
     const hasDrift = drift.missing.length > 0 ||
                      drift.extra.length > 0 ||
                      drift.descriptionDiff.length > 0 ||
-                     drift.topicsDiff.length > 0;
+                     drift.topicsDiff.length > 0 ||
+                     drift.pendingTransfer.length > 0;
 
-    // Warn about pending transfers
+    // Warn about pending transfers (causes CI to fail)
     if (drift.pendingTransfer.length > 0) {
-      console.error('\n⚠️  Warning: Repository transfer feature is under development');
-      console.error('   PRs with Origin field will be blocked until transfer automation is complete');
+      console.error('\n❌ Error: Repository transfer feature is under development');
+      console.error('   This PR will be blocked until transfer automation is complete');
 
       // Check permission status
       const readyCount = drift.pendingTransfer.filter(
