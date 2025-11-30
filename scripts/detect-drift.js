@@ -226,34 +226,43 @@ async function main() {
 
     console.log(report);
 
-    // Exit with error code if drift detected (useful for CI)
-    // Note: pendingTransfer blocks CI until transfer automation is implemented
+    // Check for pending transfers with missing permissions (blocks CI)
+    const blockedTransfers = drift.pendingTransfer.filter(
+      r => !drift.transferPermissions.get(r.origin)?.hasPermission
+    );
+
+    // Report drift status
     const hasDrift = drift.missing.length > 0 ||
                      drift.extra.length > 0 ||
                      drift.descriptionDiff.length > 0 ||
                      drift.topicsDiff.length > 0 ||
                      drift.pendingTransfer.length > 0;
 
-    // Warn about pending transfers (causes CI to fail)
-    if (drift.pendingTransfer.length > 0) {
-      console.error('\n❌ Error: Repository transfer feature is under development');
-      console.error('   This PR will be blocked until transfer automation is complete');
-
-      // Check permission status
-      const readyCount = drift.pendingTransfer.filter(
-        r => drift.transferPermissions.get(r.origin)?.hasPermission
-      ).length;
-      const blockedCount = drift.pendingTransfer.length - readyCount;
-
-      if (readyCount > 0) {
-        console.error(`   ✅ ${readyCount} repository(ies) ready (admin permission granted)`);
+    if (hasDrift) {
+      console.error('\n📋 Drift Summary:');
+      if (drift.missing.length > 0 || drift.extra.length > 0 ||
+          drift.descriptionDiff.length > 0 || drift.topicsDiff.length > 0) {
+        console.error('   ✅ Configuration drift will be fixed on merge');
       }
-      if (blockedCount > 0) {
-        console.error(`   ❌ ${blockedCount} repository(ies) blocked (missing admin permission)`);
+      if (drift.pendingTransfer.length > 0) {
+        const readyCount = drift.pendingTransfer.length - blockedTransfers.length;
+        if (readyCount > 0) {
+          console.error(`   ✅ ${readyCount} repository transfer(s) ready (admin permission granted)`);
+        }
+        if (blockedTransfers.length > 0) {
+          console.error(`   ❌ ${blockedTransfers.length} repository transfer(s) blocked (missing admin permission)`);
+        }
       }
     }
 
-    process.exit(hasDrift ? 1 : 0);
+    // Only fail CI if there are blocked transfers (missing permissions)
+    if (blockedTransfers.length > 0) {
+      console.error('\n❌ Error: Cannot proceed with repository transfer(s) - missing permissions');
+      console.error('   Grant worlddriven admin access to the source repositories to unblock');
+      process.exit(1);
+    }
+
+    process.exit(0);
   } catch (error) {
     console.error(`❌ Error: ${error.message}`);
     process.exit(1);
