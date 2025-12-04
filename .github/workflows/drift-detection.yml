@@ -106,6 +106,7 @@ jobs:
       - name: Check drift detection result
         if: steps.drift.outputs.exit_code != '0'
         run: |
-          echo "⚠️ Drift detected between REPOSITORIES.md and GitHub organization"
-          echo "Review the drift report in the PR comment above"
-          exit 0
+          echo "❌ Transfer blocked: worlddriven lacks admin permission on source repository"
+          echo "Review the drift report in the workflow summary above"
+          echo "Grant worlddriven admin access to the source repository to unblock"
+          exit 1
