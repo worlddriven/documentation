@@ -233,6 +233,39 @@ async function updateRepositoryTopics(token, repoName, topics) {
 }
 
 /**
+ * Transfer a repository to the worlddriven organization
+ * @param {string} token - GitHub token with admin access
+ * @param {string} originRepo - Source repository in format "owner/repo"
+ * @param {string} newName - Name for the repository in worlddriven org
+ * @returns {Promise<Object>} Transfer result
+ */
+async function transferRepository(token, originRepo, newName) {
+  const [owner, repo] = originRepo.split('/');
+  const url = `${GITHUB_API_BASE}/repos/${owner}/${repo}/transfer`;
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Accept': 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      new_owner: ORG_NAME,
+      new_name: newName,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Transfer failed (${response.status}): ${error}`);
+  }
+
+  return await response.json();
+}
+
+/**
  * Delete a repository from the GitHub organization
  */
 async function deleteRepository(token, repoName) {
@@ -540,8 +573,19 @@ async function executeSyncPlan(token, plan, dryRun) {
           break;
 
         case 'transfer':
-          // Transfer API not yet implemented
-          throw new Error('Repository transfer is not yet implemented. See issue #9 for progress.');
+          result = await transferRepository(token, action.origin, action.repo);
+          // Apply standard settings after transfer completes
+          // Note: Transfer is async on GitHub's side, settings may need retry
+          try {
+            await ensureStandardConfiguration(token, action.repo);
+            if (action.data.topics && action.data.topics.length > 0) {
+              await updateRepositoryTopics(token, action.repo, action.data.topics);
+            }
+          } catch (configError) {
+            // Transfer succeeded but config failed - log but don't fail
+            console.error(`Warning: Transfer succeeded but post-transfer config failed: ${configError.message}`);
+          }
+          break;
 
         default:
           throw new Error(`Unknown action type: ${action.type}`);
