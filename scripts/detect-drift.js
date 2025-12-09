@@ -127,8 +127,14 @@ function formatDriftReport(drift, desiredCount, actualCount) {
           lines.push(`  - **Ready for transfer** (once transfer automation is complete)`);
         } else {
           lines.push(`  - ❌ **Permission Status**: ${permission.details}`);
-          lines.push(`  - **Action required**: Grant worlddriven admin access to ${repo.origin}`);
-          lines.push(`  - See REPOSITORIES.md for instructions on granting permissions`);
+          lines.push(`  - **Action required**: Grant worlddriven admin access to \`${repo.origin}\``);
+          lines.push('');
+          lines.push('  **How to grant access:**');
+          lines.push(`  1. Go to https://github.com/${repo.origin}/settings/access`);
+          lines.push('  2. Click "Add people" or "Add teams"');
+          lines.push('  3. Search for "worlddriven" and select the organization');
+          lines.push('  4. Set permission level to **Admin**');
+          lines.push('  5. Send the invitation - worlddriven will auto-accept');
         }
       } else {
         lines.push(`  - ⚠️ **Permission Status**: Not checked`);
@@ -258,7 +264,12 @@ async function main() {
     // Only fail CI if there are blocked transfers (missing permissions)
     if (blockedTransfers.length > 0) {
       console.error('\n❌ Error: Cannot proceed with repository transfer(s) - missing permissions');
-      console.error('   Grant worlddriven admin access to the source repositories to unblock');
+      console.error('');
+      for (const repo of blockedTransfers) {
+        console.error(`   → ${repo.origin}: https://github.com/${repo.origin}/settings/access`);
+      }
+      console.error('');
+      console.error('   Grant worlddriven "Admin" access at the URLs above to unblock this PR.');
       process.exit(1);
     }
 
