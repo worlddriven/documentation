@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Check if worlddriven organization has admin permission on a repository
+ * Check if worlddrivenbot has admin permission on a repository
  * Required for repository transfer automation
  */
 
@@ -9,7 +9,7 @@ const GITHUB_API_BASE = 'https://api.github.com';
 const ORG_NAME = 'worlddriven';
 
 /**
- * Check if worlddriven org has admin permission on the origin repository
+ * Check if the authenticated user (worlddrivenbot) has admin permission on the origin repository
  *
  * @param {string} token - GitHub token (WORLDDRIVEN_GITHUB_TOKEN)
  * @param {string} originRepo - Repository in format "owner/repo-name"
@@ -31,8 +31,9 @@ export async function checkTransferPermission(token, originRepo) {
   }
 
   try {
-    // Check if worlddriven org has admin permission on the origin repository
-    const url = `${GITHUB_API_BASE}/repos/${owner}/${repo}/collaborators/${ORG_NAME}/permission`;
+    // Check the authenticated user's permission on the origin repository
+    // The repo endpoint returns permissions for the authenticated user
+    const url = `${GITHUB_API_BASE}/repos/${owner}/${repo}`;
 
     const response = await fetch(url, {
       headers: {
@@ -44,11 +45,11 @@ export async function checkTransferPermission(token, originRepo) {
 
     // Handle different response scenarios
     if (response.status === 404) {
-      // Repository doesn't exist or worlddriven doesn't have any permission
+      // Repository doesn't exist or user doesn't have any access
       return {
         hasPermission: false,
         permissionLevel: 'none',
-        details: `Repository ${originRepo} not found or worlddriven has no access`,
+        details: `Repository ${originRepo} not found or no access`,
       };
     }
 
@@ -64,16 +65,19 @@ export async function checkTransferPermission(token, originRepo) {
 
     const data = await response.json();
 
-    // GitHub returns permission level: "admin", "write", "read", or "none"
-    const permissionLevel = data.permission || 'none';
-    const hasPermission = permissionLevel === 'admin';
+    // The repo response includes permissions object for the authenticated user
+    const permissions = data.permissions || {};
+    const hasPermission = permissions.admin === true;
+    const permissionLevel = hasPermission ? 'admin' :
+                           permissions.push ? 'write' :
+                           permissions.pull ? 'read' : 'none';
 
     return {
       hasPermission,
       permissionLevel,
       details: hasPermission
-        ? `✅ ${ORG_NAME} has admin access to ${originRepo}`
-        : `❌ ${ORG_NAME} has "${permissionLevel}" access to ${originRepo} (admin required)`,
+        ? `✅ worlddrivenbot has admin access to ${originRepo}`
+        : `❌ worlddrivenbot has "${permissionLevel}" access to ${originRepo} (admin required)`,
     };
 
   } catch (error) {
