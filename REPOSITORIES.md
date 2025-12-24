@@ -117,7 +117,7 @@ Track implementation progress in GitHub issue #9.
 - Description: Web application interface for worlddriven
 - Topics: webapp, web, frontend, worlddriven
 
-## test
+## migration-test-v2
 - Description: Test repository for migration automation
 - Topics: test, migration, automation
 - Origin: TooAngel/worlddriven-migration-test
