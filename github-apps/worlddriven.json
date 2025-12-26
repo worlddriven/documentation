@@ -1,0 +1,28 @@
+{
+  "name": "WorldDriven",
+  "url": "https://www.worlddriven.org",
+  "hook_attributes": {
+    "url": "https://www.worlddriven.org/api/webhooks/github"
+  },
+  "redirect_url": "https://www.worlddriven.org/auth/callback",
+  "callback_urls": [
+    "https://www.worlddriven.org/auth/callback"
+  ],
+  "setup_url": "https://www.worlddriven.org/setup",
+  "description": "World Driven - Democratic Pull Request Management Through Contribution-Based Voting.\n\nWorld Driven transforms how open source projects handle pull requests by implementing a fair, transparent, and automated merge system based on contributor participation.\n\nHow It Works:\n- Pull requests are automatically merged after a configurable time period (default: 10 days)\n- Contributors can vote on PRs through GitHub's native review system\n- Approve a review to speed up the merge\n- Request Changes to slow it down or block the merge\n- Vote weight is proportional to contributions to the project\n\nPerfect for open source projects with distributed maintainership, teams wanting democratic code review processes, and communities prioritizing contributor empowerment.",
+  "public": true,
+  "default_events": [
+    "pull_request",
+    "pull_request_review",
+    "push"
+  ],
+  "default_permissions": {
+    "checks": "write",
+    "contents": "write",
+    "issues": "write",
+    "metadata": "read",
+    "pull_requests": "write",
+    "statuses": "write",
+    "workflows": "write"
+  }
+}
