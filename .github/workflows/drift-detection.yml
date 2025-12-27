@@ -2,10 +2,6 @@ name: Repository Drift Detection
 
 on:
   pull_request:
-    paths:
-      - 'REPOSITORIES.md'
-      - 'scripts/**'
-      - '.github/workflows/drift-detection.yml'
 
 jobs:
   detect-drift:
