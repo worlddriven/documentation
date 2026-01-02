@@ -8,6 +8,7 @@ on:
 jobs:
   sync:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     # Only run on the main worlddriven organization, not on forks
     if: github.repository_owner == 'worlddriven'
     permissions:

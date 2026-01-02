@@ -5,7 +5,8 @@
  * Returns an array of repository objects
  */
 
-import { readFile } from 'fs/promises';
+import { readFile, access } from 'fs/promises';
+import { constants } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
@@ -101,6 +102,14 @@ function parseRepositories(content) {
  */
 async function parseRepositoriesFile() {
   const repoFilePath = join(__dirname, '..', 'REPOSITORIES.md');
+
+  // Validate file exists before attempting to read
+  try {
+    await access(repoFilePath, constants.R_OK);
+  } catch {
+    console.error(`Error: REPOSITORIES.md not found at ${repoFilePath}`);
+    process.exit(1);
+  }
 
   try {
     const content = await readFile(repoFilePath, 'utf-8');
