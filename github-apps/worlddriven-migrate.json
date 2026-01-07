@@ -7,6 +7,7 @@
   "description": "One-time repository migration to the worlddriven organization.\n\nThis app enables automated transfer of your repository to the worlddriven org after your migration PR has been approved by the community.\n\nHow It Works:\n1. Create a PR adding your repository to REPOSITORIES.md\n2. Wait for community approval through worlddriven voting\n3. Install this app on your repository\n4. Your repository is automatically transferred to the worlddriven org\n5. The PR auto-merges once the transfer completes\n\nThis app only requires Administration permission to perform the one-time transfer. You can uninstall it after migration is complete.\n\nNote: This is a separate app from the main WorldDriven app to keep permissions minimal. The main app handles PR voting and auto-merge; this app only handles repository transfers.",
   "public": true,
   "default_events": [
+    "installation",
     "installation_repositories"
   ],
   "default_permissions": {

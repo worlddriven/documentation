@@ -2,6 +2,8 @@
 
 This directory contains the manifest files for WorldDriven's GitHub Apps. These manifests define the permissions, events, and configuration for each app.
 
+For how these apps fit into the overall system, see [ARCHITECTURE.md](../ARCHITECTURE.md).
+
 ## Apps Overview
 
 | App | Purpose | Permissions |
@@ -76,6 +78,15 @@ GitHub Apps cannot be updated via API. To change permissions or settings:
 4. Update the manifest file in this repository to keep documentation in sync
 
 **Note**: When permissions are added, existing installations must approve the new permissions.
+
+## Backend Implementation
+
+The webhook handlers for these apps are implemented in the [core repository](https://github.com/worlddriven/core):
+
+| App | Webhook Endpoint | Handler |
+|-----|------------------|---------|
+| WorldDriven | `/api/webhooks/github` | `webhookHandler.js` |
+| WorldDriven Migrate | `/api/webhooks/migrate` | `migrationHandler.js` |
 
 ## References
 
