@@ -50,9 +50,14 @@ export async function checkTransferPermission(appId, privateKey, originRepo) {
   // Support legacy call signature for backward compatibility
   // Old: checkTransferPermission(token, originRepo)
   // New: checkTransferPermission(appId, privateKey, originRepo)
-  if (!originRepo && privateKey && privateKey.includes('/')) {
+  //
+  // Detection: privateKey is a PEM key (starts with '-----BEGIN') for new signature,
+  // or looks like a repo path (contains '/') or is empty/missing for old signature
+  const isLegacyCall = !originRepo && (!privateKey || !privateKey.startsWith('-----BEGIN'));
+
+  if (isLegacyCall) {
     // Called with old signature: (token, originRepo)
-    // Fall back to token-based check
+    // appId is actually the token, privateKey is actually originRepo
     return checkTransferPermissionLegacy(appId, privateKey);
   }
 
