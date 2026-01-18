@@ -31,6 +31,8 @@ jobs:
         id: sync
         env:
           WORLDDRIVEN_GITHUB_TOKEN: ${{ secrets.WORLDDRIVEN_GITHUB_TOKEN }}
+          MIGRATE_APP_ID: ${{ secrets.MIGRATE_APP_ID }}
+          MIGRATE_APP_PRIVATE_KEY: ${{ secrets.MIGRATE_APP_PRIVATE_KEY }}
         run: |
           set +e
           node scripts/sync-repositories.js --apply > sync-report.md 2>&1
