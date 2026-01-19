@@ -759,7 +759,18 @@ async function main() {
     if (reposWithOrigin.length > 0) {
       console.error('🔐 Checking transfer permissions...');
       const originRepos = reposWithOrigin.map(r => r.origin);
-      transferPermissions = await checkMultipleTransferPermissions(token, originRepos);
+
+      // Use app-based auth if credentials are available
+      const appId = process.env.MIGRATE_APP_ID;
+      const privateKey = process.env.MIGRATE_APP_PRIVATE_KEY;
+
+      if (appId && privateKey) {
+        console.error('   Using GitHub App authentication (worlddriven-migrate)');
+        transferPermissions = await checkMultipleTransferPermissions(appId, privateKey, originRepos);
+      } else {
+        console.error('   Using legacy token authentication');
+        transferPermissions = await checkMultipleTransferPermissions(token, originRepos);
+      }
     }
 
     // Detect drift
