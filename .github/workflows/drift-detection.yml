@@ -1,7 +1,9 @@
 name: Repository Drift Detection
 
+# Use pull_request_target to run trusted workflow from base repository
+# This allows access to secrets while running code from main branch
 on:
-  pull_request:
+  pull_request_target:
 
 jobs:
   detect-drift:
@@ -12,8 +14,25 @@ jobs:
       contents: read
 
     steps:
-      - name: Checkout code
+      # Checkout the base repository (main branch) - trusted code
+      - name: Checkout base repository
         uses: actions/checkout@v4
+        with:
+          ref: main
+
+      # Checkout PR's REPOSITORIES.md to see what changes are proposed
+      - name: Checkout PR REPOSITORIES.md
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          sparse-checkout: |
+            REPOSITORIES.md
+          sparse-checkout-cone-mode: false
+          path: pr-files
+
+      # Copy PR's REPOSITORIES.md to working directory
+      - name: Use PR's REPOSITORIES.md
+        run: cp pr-files/REPOSITORIES.md REPOSITORIES.md
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -63,8 +82,6 @@ jobs:
           cat sync-preview.md >> $GITHUB_STEP_SUMMARY
 
       - name: Comment PR with drift report and sync preview
-        # Skip commenting on fork PRs (no write permissions), but drift report is available in workflow summary above
-        if: github.event.pull_request.head.repo.full_name == github.repository
         uses: actions/github-script@v7
         with:
           script: |
@@ -107,7 +124,7 @@ jobs:
       - name: Check drift detection result
         if: steps.drift.outputs.exit_code != '0'
         run: |
-          echo "❌ Transfer blocked: worlddriven lacks admin permission on source repository"
+          echo "❌ Transfer blocked: worlddriven-migrate app not installed on source repository"
           echo "Review the drift report in the workflow summary above"
-          echo "Grant worlddriven admin access to the source repository to unblock"
+          echo "Install the worlddriven-migrate app on the source repository to unblock"
           exit 1
