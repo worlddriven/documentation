@@ -1,0 +1,32 @@
+name: Transfer Probe
+
+# Read-only diagnostic: lists the repository invitations pending for the sync
+# token's account, to find out whether incoming repository transfers can be
+# accepted via the API. Runs from main only, so no pull request code ever
+# sees the token.
+
+on:
+  schedule:
+    - cron: "17 * * * *"
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: github.repository_owner == 'worlddriven'
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "26"
+
+      - name: List pending repository invitations
+        env:
+          WORLDDRIVEN_GITHUB_TOKEN: ${{ secrets.WORLDDRIVEN_GITHUB_TOKEN }}
+        run: node scripts/probe-transfer-invitations.js
